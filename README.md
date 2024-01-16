@@ -138,4 +138,12 @@ You can use `Result.from_func` method to integrate this with existing functions.
         return [1, 2, 3, n]
 
     x = Result.from_func(older, list, n=2)
+
+    # Important:
+    #  if your function doesn't accept arguments, use "()" at the end to call it properly
+    
+    # Example:
+    x = Result.from_func(no_args)()
+                                  ^
+                          Call the function
     ```

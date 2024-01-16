@@ -19,10 +19,11 @@ class Result(Generic[T]):
         - `error`: Exception - Error raised by the method
         - `handler`: Callable - Handler function
     """
+    __slots__ = ("value", "error", "handler")
 
     def __init__(self):
         self.value: Optional[T] = None
-        self.error: Optional[Union[Tuple[Type[BaseException], str], str]] = None
+        self.error: Optional[Union[Tuple[Optional[Type[BaseException]], Optional[str]], str]] = (None, None)
         self.handler: Optional[Callable] = self.__default_handler
 
     def unless(self, handler: Callable = None, **kwargs):
