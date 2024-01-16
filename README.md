@@ -86,6 +86,10 @@ pip3 install unless-handler
 
 
 # Examples
+- [Basic usage](#basic-usage)
+- [Custom error handler](#custom-error-handling)
+- [Integrate with existing functions](#integrate-with-existing-functions)
+
 
 ### Basic usage
 ```py
