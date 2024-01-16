@@ -23,13 +23,13 @@ pip3 install unless-handler
 
 - **Import the `Result` class and `traceback.format_exc` for tracebacks**
     ```py
-    from unless.result import Result
+    from unless import Result
 
     from traceback import format_exc # Optional
     ```
 
 
-- Integrate `Result` into your function
+- **Integrate `Result` into your function**
     - Initialize the `Result` class (specify the return type for type hints)
         ```py
         def cool():
