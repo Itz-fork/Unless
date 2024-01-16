@@ -1,10 +1,11 @@
 # Copyright (c) 2024 Itz-fork
 
+import logging
 import traceback
 
 from asyncio import get_event_loop
 from inspect import iscoroutinefunction
-from typing import Generic, TypeVar, Callable, Any, Optional
+from typing import Generic, Tuple, Type, TypeVar, Callable, Any, Optional, Union
 
 
 T = TypeVar("T")
@@ -21,7 +22,7 @@ class Result(Generic[T]):
 
     def __init__(self):
         self.value: Optional[T] = None
-        self.error: Optional[Exception] = None
+        self.error: Optional[Union[Tuple[Type[BaseException], str], str]] = None
         self.handler: Optional[Callable] = self.__default_handler
 
     def unless(self, handler: Callable = None, **kwargs):
@@ -52,9 +53,9 @@ class Result(Generic[T]):
         return self.value
 
     @classmethod
-    def from_func(res, func: Callable[..., T], rtype=Any, *args, **kwargs):
+    def from_func(cls, func: Callable[..., T] = None, rtype=Any, *args, **kwargs):
         """
-        Used to bring Result to existing functions
+        Used to integrate Result to existing functions
 
         Arguments:
             - `func`: Callable - Function to call
@@ -62,19 +63,30 @@ class Result(Generic[T]):
             - `args`: Any - Arguments to pass to the function
             - `kwargs`: Any - Keyword arguments to pass to the function
         """
-        to_return = res[rtype]()
-        try:
-            if iscoroutinefunction(func):
-                to_return.value = get_event_loop().run_until_complete(
-                    func(*args, **kwargs)
-                )
-            else:
-                to_return.value = func(*args, **kwargs)
-        except:
-            to_return.error = traceback.format_exc()
 
-        return to_return
+        # for non-decorators
+        if func is None:
+            return lambda f: cls.from_func(f, rtype, *args, **kwargs)
+
+        def fn_wrapper(*fargs, **fkwargs):  # goofy ahh
+            to_return = cls[rtype]()
+            try:
+                if iscoroutinefunction(func):
+                    to_return.value = get_event_loop().run_until_complete(
+                        func(*fargs, **fkwargs)
+                    )
+                else:
+                    to_return.value = func(*fargs, **fkwargs)
+            except Exception as e:
+                to_return.error = type(e), traceback.format_exc()
+
+            return to_return
+
+        if args or kwargs:
+            return fn_wrapper(*args, **kwargs)
+        else:
+            return fn_wrapper
 
     def __default_handler(self, error: Exception):
         "Default error handler"
-        print(f"ERROR: {error}")
+        logging.error(f"ERROR: {error}")

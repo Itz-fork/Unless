@@ -1,5 +1,5 @@
 # Unless
-**Unless** is a lightweight python library designed to simplify error handling. It introduces the `Result` class that encapsulates the result of a function call, which can be either the result value, an error, or both.
+**Unless** is a lightweight python library designed to simplify error handling. It introduces the `Result` class that encapsulates the result of a function call, which can be either the return value, an error, or both.
 
 
 # Install
@@ -11,9 +11,14 @@ pip3 install unless-handler
 # Usage
 > **💡 Remember**
 >
->`Result` class has 2 properties,
->   - `value` - The return value of the function
->   - `error` - Information about the error if there was any
+>`Result` class has 2 properties and 1 method,
+>  - Properties
+>    - `value` - The return value of the function
+>    - `error` - Information about the error if there was any
+>        - It can be either a tuple of the exception type and traceback string, or just the traceback string
+>
+>  - Methods
+>    - `unless` - Handle errors and return the `value`
 
 
 - **Import the `Result` class and `traceback.format_exc` for tracebacks**
@@ -44,12 +49,13 @@ pip3 install unless-handler
 
     - Catch and set errors
         - Use `error` property of the `Result` class to set errors
+        - You have the freedom to set any value you like; however, it is **recommended** to follow the given syntax of `<type>, <traceback>` as it gives the ability to have caused exception type and the traceback for better error handling
         ```py
         try:
             ...
-        except:
-            # <initialized>.error = <traceback.format_exc()>
-            to_return.error = format_exc()
+        except Exception as e:
+            # <initialized>.error = <exception type>, <traceback.format_exc()>
+            to_return.error = type(e), format_exc()
         ```
 
     - Return the result
@@ -89,7 +95,7 @@ def cool():
         to_return.value = [1, 2, 3]
         raise ValueError("Annoying error...")
     except Exception as e:
-        to_return.error = traceback.format_exc()
+        to_return.error = type(e), traceback.format_exc()
     return to_return
 
 # Calling the function
@@ -97,17 +103,18 @@ x = cool().unless()
 print(x)
 ```
 
-
 ### Custom error handling
 You can call functions with custom error handling logic using `Result.unless` method that your function returns.
 
 - You can pass **any python function** to the `unless` method
-- Your handler function _must_ accept at least 1 argument (traceback str)
+- Your handler function _must_ accept at least 1 argument
+    - If you're using `Result.from_func` or following the recommended syntax, the 1st argument will be a tuple consist of `<type of exception>, <traceback string>`
 - Handler function _can have_ keyword arguments (`x.unless(func, arg1="first", arg2="second")`)
 
 ```py
 def custom_handler(e, notes):
-    logging.warn(f"{e} \n\nNotes: {notes}")
+    _, fmt_traceback = e
+    logging.warn(f"{fmt_traceback} \n\nNotes: {notes}")
 
 x = cool().unless(
         custom_handler,
@@ -115,3 +122,20 @@ x = cool().unless(
     )
 print(x)
 ```
+
+### Integrate with existing functions
+You can use `Result.from_func` method to integrate this with existing functions.
+
+- As a decorator,
+    ```py
+    @Result.from_func
+    def older(n) -> list:
+        return [1, 2, 3, n]
+    ```
+- As a function,
+    ```py
+    def older(n) -> list:
+        return [1, 2, 3, n]
+
+    x = Result.from_func(older, list, n=2)
+    ```
