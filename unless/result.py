@@ -1,10 +1,11 @@
 # Copyright (c) 2024 Itz-fork
 
+import functools
+import types
 import logging
 import traceback
 
 from asyncio import get_event_loop
-from inspect import iscoroutinefunction
 from typing import Generic, Tuple, Type, TypeVar, Callable, Any, Optional, Union
 
 
@@ -19,11 +20,14 @@ class Result(Generic[T]):
         - `error`: Exception - Error raised by the method
         - `handler`: Callable - Handler function
     """
+
     __slots__ = ("value", "error", "handler")
 
     def __init__(self):
         self.value: Optional[T] = None
-        self.error: Optional[Union[Tuple[Optional[Type[BaseException]], Optional[str]], str]] = (None, None)
+        self.error: Optional[
+            Union[Tuple[Optional[Type[BaseException]], Optional[str]], str]
+        ] = (None, None)
         self.handler: Optional[Callable] = self.__default_handler
 
     def unless(self, handler: Callable = None, **kwargs):
@@ -40,12 +44,11 @@ class Result(Generic[T]):
             ```
         """
         # set handler
-        if handler:
-            self.handler = handler
+        self.handler = handler or self.handler
 
         # run handler
         if self.error:
-            if iscoroutinefunction(self.handler):
+            if isinstance(self.handler, types.CoroutineType):
                 get_event_loop().run_until_complete(self.handler(self.error, **kwargs))
             else:
                 self.handler(self.error, **kwargs)
@@ -67,12 +70,13 @@ class Result(Generic[T]):
 
         # for non-decorators
         if func is None:
-            return lambda f: cls.from_func(f, rtype, *args, **kwargs)
+            return functools.partial(cls.from_func, rtype=rtype, *args, **kwargs)
+
+        to_return = cls[rtype]()
 
         def fn_wrapper(*fargs, **fkwargs):  # goofy ahh
-            to_return = cls[rtype]()
             try:
-                if iscoroutinefunction(func):
+                if isinstance(func, types.CoroutineType):
                     to_return.value = get_event_loop().run_until_complete(
                         func(*fargs, **fkwargs)
                     )
